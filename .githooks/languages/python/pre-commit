@@ -1,0 +1,56 @@
+#!/bin/sh
+
+echo "------------------------------------------------------------------"
+echo "Running pre-commit githooks, this may take a moment"
+echo "These hooks will:"
+echo " * Run the code formatter"
+echo " * Run the tests"
+echo " * Run Lizard Code Complexity Analysis"
+echo "------------------------------------------------------------------"
+
+errorMessage(){
+    echo "\033[91m============================="
+    echo "\033[91m=       $1 Failed           ="
+    echo "\033[91m============================="
+    echo "\033[0m"
+}
+echo
+echo "#############################"
+echo "#     Running Formatter     #"
+echo "#############################"
+
+.githooks/languages/python/lint-script --nostash
+
+code=$?
+if [ "$code" != "0" ]; then
+    errorMessage "Formatter"
+    exit $code
+fi
+echo
+echo "#############################"
+echo "#       Running Tests       #"
+echo "#############################"
+# add test runner command here
+./manage.py test
+code=$?
+if [ "$code" != "0" ]; then
+    errorMessage "Tests"
+    exit $code
+fi
+echo
+echo "#############################"
+echo "#       Running Lizard      #"
+echo "#############################"
+.githooks/scripts/lizard-analyze-staged-files
+code=$?
+if [ "$code" != "0" ]; then
+    errorMessage "Lizard"
+    exit $code
+fi
+
+echo
+echo "\033[92m============================="
+echo "\033[92m=    Pre-Commit Passed!!    ="
+echo "\033[92m============================="
+echo "\033[0m"
+exit 0

@@ -1,0 +1,48 @@
+#!/bin/sh
+
+echo "------------------------------------------------------------------"
+echo "Running pre-commit githooks, this may take a moment"
+echo "These hooks will:"
+echo " * Run the code formatter"
+echo " * Run the tests"
+echo " * Run Lizard Code Complexity Analysis"
+echo "------------------------------------------------------------------"
+
+echo "#############################"
+echo "#     Running Formatter     #"
+echo "#############################"
+# add formatter/linter command here
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=     Formatter Failed      ="
+  echo "============================="
+  exit $code
+fi
+echo "#############################"
+echo "#       Running Tests       #"
+echo "#############################"
+# add test runner command here
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=       Tests Failed        ="
+  echo "============================="
+  exit $code
+fi
+echo "#############################"
+echo "#       Running Lizard      #"
+echo "#############################"
+.githooks/scripts/lizard-analyze-staged-files
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=      Lizard Failed        ="
+  echo "============================="
+  exit $code
+fi
+
+echo "============================="
+echo "=    Pre-Commit Passed!!    ="
+echo "============================="
+exit 0

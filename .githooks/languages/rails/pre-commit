@@ -1,0 +1,26 @@
+#!/bin/bash
+
+bundle exec rspec
+code=$?
+if [[ "$code" == "0" ]]; then
+  .githooks/scripts/lizard-analyze-staged-files
+  code=$?
+fi
+
+if [[ "$code" == "0" ]]; then
+  exit 0
+fi
+
+cat <<EOF
+ _____
+| ____|
+| |_     _ __   _ __   ____    _ __
+|  _|   | '__| | '__| /  _ \  | '__|
+| |___  | |    | |    | (_) | | |
+|_____| |_|    |_|    \____/  |_|
+------------------------------------------------------------------
+Test execution failed, make sure to update any test affected
+by your changes or fix any lint errors.
+------------------------------------------------------------------
+EOF
+exit $code

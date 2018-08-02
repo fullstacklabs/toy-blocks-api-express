@@ -1,0 +1,63 @@
+#!/bin/sh
+
+echo "------------------------------------------------------------------"
+echo "Running pre-commit githooks, this may take a moment"
+echo "These hooks will:"
+echo " * Run the code formatter"
+echo " * Run the tests"
+echo " * Run Lizard Code Complexity Analysis"
+echo "------------------------------------------------------------------"
+container=$(docker ps | grep -i "${PWD##*/}" | awk '{ print $1 }')
+
+echo "#############################"
+echo "#     Running Formatter     #"
+echo "#############################"
+if [ ! -z "$container" ]; then
+  docker exec $container php composer.phar format-commit
+else
+  php composer.phar format-commit
+fi
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=     Formatter Failed      ="
+  echo "============================="
+  exit $code
+fi
+
+echo "#############################"
+echo "#       Running Tests       #"
+echo "#############################"
+if [ ! -z "$container" ]; then
+  docker exec $container php composer.phar test
+else
+  php composer.phar test
+fi
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=       Tests Failed        ="
+  echo "============================="
+  exit $code
+fi
+
+echo "#############################"
+echo "#       Running Lizard      #"
+echo "#############################"
+if [ ! -z "$container" ]; then
+  docker exec $container php composer.phar lizard-commit
+else
+  php composer.phar lizard-commit
+fi
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=      Lizard Failed        ="
+  echo "============================="
+  exit $code
+fi
+
+echo "============================="
+echo "=    Pre-Commit Passed!!    ="
+echo "============================="
+exit 0

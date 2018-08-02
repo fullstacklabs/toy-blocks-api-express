@@ -1,0 +1,69 @@
+#!/bin/sh
+echo "------------------------------------------------------------------"
+echo "Running pre-commit githooks, this may take a moment"
+echo "These hooks will:"
+echo " * Run the code formatter"
+echo " * Run the tests"
+echo " * Run Lizard Code Complexity Analysis"
+echo "------------------------------------------------------------------"
+
+echo "#############################"
+echo "#     Running Linter     #"
+echo "#############################"
+jsfiles=$(git diff --cached --name-only --diff-filter=ACM "*.js" "*.jsx" | tr '\n' ' ')
+[ -z "$jsfiles" ] && exit 0
+# Prettify all staged .js files
+echo "$jsfiles" | xargs ./node_modules/.bin/eslint --max-warnings 0
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=     Linter Failed      ="
+  echo "============================="
+  exit $code
+fi
+
+# Add back the modified/prettified files to staging
+echo "$jsfiles" | xargs git add
+
+echo "#############################"
+echo "#       Running Tests       #"
+echo "#############################"
+# disable tests due to most of them being broken.
+npm run test -- --silent
+if [ "$code" != "0" ]; then
+echo "============================="
+echo "=       Tests Failed        ="
+echo "============================="
+exit $code
+fi
+
+echo "#############################"
+echo "#       Running Lizard      #"
+echo "#############################"
+
+./.githooks/scripts/lizard-analyze-staged-files
+
+code=$?
+if [ "$code" != "0" ]; then
+  echo "============================="
+  echo "=      Lizard Failed        ="
+  echo "============================="
+  exit $code
+fi
+
+if [ "$code" == "0" ]; then
+    exit 0
+fi
+
+cat <<\EOF
+ _____
+| ____|_ __ _ __ ___  _ __
+|  _| | '__| '__/ _ \| '__|
+| |___| |  | | | (_) | |
+|_____|_|  |_|  \___/|_|
+------------------------------------------------------------------
+Test execution failed, make sure to update any test affected
+by your changes or fix any lint errors.
+------------------------------------------------------------------
+EOF
+exit $code

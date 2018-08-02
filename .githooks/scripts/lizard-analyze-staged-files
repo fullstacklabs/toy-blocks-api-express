@@ -1,0 +1,107 @@
+#!/bin/bash
+
+# import app settings from .app-settings
+export $(cat ${PWD}/.githooks/.app-settings | grep -v ^# | xargs)
+
+if [[ ! -z $CCN_LIMIT ]]
+then
+    CCN_LIMIT=5
+fi
+
+if [[ ! -z $1 ]];
+then
+    compare=$1
+else
+    compare="HEAD"
+fi
+
+function get_formatted_function_name () {
+    echo $1 | awk -F "\"*,\"*" '{print $6}' | cut -d @ -f 1 | sed -e 's/::/_/g' | sed -e "s/[^[:alnum:]_]/_/g" | sed -e 's/__*/_/g' | sed -e 's/_\+$//' | sed -e 's/-/_/'
+}
+
+function get_formatted_anonymous_function_name () {
+    echo $1 | awk -F "\"*,\"*" '{print $6}'
+}
+
+function function_is_anonymous () {
+    function_score_row=$1
+    function_name=$(get_formatted_function_name $function_score_row)
+    if [ $function_name == "function" ]; then
+        echo true;
+    else
+        echo false;
+    fi
+}
+
+function make_function_variable_name () {
+    code_file=$1
+    function_score_row=$2
+    formatted_file_name=$(echo ${code_file//.} | sed -e 's/\//_/g' | sed -e 's/-/_/g')
+    function_variable_name="${formatted_file_name}_"
+    function_variable_name+="$(get_formatted_function_name $function_score_row )"
+    echo $function_variable_name
+}
+
+if [[ -z $BLACKLIST ]];
+then
+    comitted_code_files=$(git diff $compare --cached --name-only --diff-filter=ACM -- "*.php" "*.js" "*.py" "*.rb")
+else
+    comitted_code_files=$(git diff $compare --cached --name-only --diff-filter=ACM -- "*.php" "*.js" "*.py" "*.rb" | egrep -v "$BLACKLIST")
+fi
+for code_file in $comitted_code_files; do
+    rm -rf .lizard-original/*
+    file_existed_previously=$(git ls-tree -r $compare | grep $code_file | wc -l)
+    if [ "$file_existed_previously" -gt "0" ]; then
+        mkdir -p .lizard-original
+        original_file=".lizard-original/original.${code_file##*.}"
+        git show $compare:./$code_file > $original_file
+        # get the functions and scores from the previous revision
+        previous_file_functions=$($(which python) .githooks/lizard/lizard.py "$original_file" -m --csv | sed -e 's/\ /_/g');
+        # save the previous function scores to variables
+        for function_score_row in $previous_file_functions; do
+            if [ "$(function_is_anonymous $function_score_row)" == "false" ]; then
+                function_variable_name=$(make_function_variable_name ${code_file//.} $function_score_row)
+                declare "$function_variable_name"="$(echo $function_score_row | awk -F "\"*,\"*" '{print $2}')"
+            fi
+        done
+    fi
+    # itterate all of the current file functions
+    new_file_functions=$($(which python) .githooks/lizard/lizard.py "$code_file" -m --csv | sed -e 's/\ /_/g');
+    # check to see if the function is new, or if the score has gotten worse
+    for function_score_row in $new_file_functions; do\
+        new_score=$(echo $function_score_row | awk -F "\"*,\"*" '{print $2}')
+        if [ "$(function_is_anonymous $function_score_row)" == "true" ]; then
+            if [[ "$new_score" -gt "$CCN_LIMIT" ]]; then
+                function_identifier=$(get_formatted_anonymous_function_name $function_score_row)
+                echo "!!!! WARNING: ($function_identifier) Anonymous function found which violates the max complexity score of $CCN_LIMIT (complexity score: $new_score) !!!!"
+            fi
+        else
+            formatted_file_name=${code_file//.}
+            check_variable_name=$(make_function_variable_name ${code_file//.} $function_score_row)
+            existing_score=${!check_variable_name}
+            if [ ! -z "$existing_score" ]; then
+                #existing function
+                if [[ "$new_score" -gt "$CCN_LIMIT" && "$new_score" -gt "$existing_score" ]]; then
+                    function_identifier=$(get_formatted_anonymous_function_name $function_score_row)
+                    echo "!!!! ERROR: ($function_identifier) has increased beyond it's previous complexity  (was: $existing_score now: $new_score) !!!!"
+                    fail=1
+                fi
+            else
+                #new function
+                if [[ "$new_score" -gt "$CCN_LIMIT" ]]; then
+                    function_identifier=$(get_formatted_anonymous_function_name $function_score_row)
+                    echo "!!!! ERROR: ($function_identifier) is a new function which violates the max complexity score of $CCN_LIMIT (complexity score: $new_score) !!!!"
+                    fail=1
+                fi
+            fi
+        fi
+    done
+    fail=$fail
+done
+
+rm -rf .lizard-original
+if [ -z "$fail" ]; then
+    exit 0
+else
+    exit 1
+fi

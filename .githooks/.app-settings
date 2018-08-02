@@ -1,0 +1,19 @@
+# -------------
+# PROJECT_TYPE is used to pull certain githooks branch
+# Options: ( any foldername from ../languages )
+# -------------
+PROJECT_TYPE=node
+
+# -------------
+# CCN_LIMIT is used to indicate the max complexity for this project
+# When exceeded on new files/functions or when function complexity increases, pre-commit will exit
+# Typical value: 5 (shouldn't exceed 10)
+# -------------
+CCN_LIMIT=5
+
+# -------------
+# BLACKLIST is used to ignore files matching the provided pattern
+# regex
+# example: BLACKLIST=assets|stuff|\.php
+# -------------
+BLACKLIST=\.githooks
