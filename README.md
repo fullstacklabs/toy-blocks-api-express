@@ -15,6 +15,8 @@
 ### Process
 
 * Clone the repo & cd to the project directory
+* run `cp .env.example .env`
+* Open `.env` and set `CLIENT_APP_URL` to the address of the client (if needed)
 * run `npm install`
 * run `psql -c 'CREATE ROLE toyblocksapiexpress WITH LOGIN CREATEDB;'`
 * run `psql -c 'create database toy_blocks_api_express;'`
@@ -33,9 +35,3 @@ These file types are:
 * HTTP handlers (`src/handlers/`)
 * Database models (`src/models/`)
 * Tests (`tests/`)
-
-### Development Environment
-
-In development run `mv .env.dev .env` to setup the environment.
-Then, set the following:
-`CLIENT_APP_URL` to your toy-blocks-api-express app's address
