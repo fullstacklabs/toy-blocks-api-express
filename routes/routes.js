@@ -1,8 +1,7 @@
-const express = require('express');
+const express = require("express");
 const blocksController = require("../src/handlers/api/v1/blocksHandler");
 const peersController = require("../src/handlers/api/v1/peersHandler");
 const statusHandler = require("../src/handlers/api/v1/statusHandler");
-
 
 module.exports = function(app) {
   const apiRouter = express.Router();
