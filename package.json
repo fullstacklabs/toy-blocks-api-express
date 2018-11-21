@@ -10,7 +10,7 @@
     "resetdb": "./node_modules/.bin/knex migrate:latest && ./node_modules/.bin/knex seed:run",
     "migrate:make": "./node_modules/.bin/knex migrate:make",
     "start": "node_modules/.bin/pm2 kill && NODE_ENV=production node_modules/.bin/pm2 start index.js --name toy-blocks-api-express > /tmp/toy-blocks-api-express-pm2-log 2>&1 &",
-    "start:dev": "./node_modules/.bin/supervisor --watch src,routes -k index.js",
+    "start:dev": "./node_modules/.bin/supervisor --inspect --watch src,routes -k index.js",
     "lint": "npm run makeitpretty && esw src routes --color --fix",
     "lint:watch": "npm run lint -- --watch",
     "makeitpretty": "prettier --no-bracket-spacing --trailing-comma --tab-width=2 --use-tabs=false all --write '{routes,tests,src}/**/*.js'"
